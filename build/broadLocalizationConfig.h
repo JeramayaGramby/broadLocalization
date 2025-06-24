@@ -1,0 +1,2 @@
+#define broadLocalization_VERSION_MAJOR 1
+#define broadLocalization_VERSION_MINOR 0

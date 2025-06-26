@@ -31,12 +31,30 @@ namespace Localization {
         static_assert(sizeof(BoundaryShape) == sizeof(int),
                       "BoundaryShape size mismatch");
 
+        constexpr double METERS_PER_DEGREE_LAT = 111000.0;
+        double latRad = center.latitude * DEG_TO_RAD;
+
         Boundary boundary(shape, center, dimension, orientationAngle);
 
         int sides = getNumSides(shape);
         if (sides == 0) {
-            // For Circle or unhandled, skip polygon generation
-            std::cout << "Non-polygon shape, using radius anchor approximation only.\n";
+            int samples = 32;
+            boundary.vertices.reserve(samples);
+
+            for (int i = 0; i < samples; ++i) {
+                double theta = 2 * M_PI * i / samples;
+                double deltaNorth = dimension * std::cos(theta);
+                double deltaEast  = dimension * std::sin(theta);
+
+                double deltaLat = deltaNorth / METERS_PER_DEGREE_LAT;
+                double deltaLon = deltaEast / (METERS_PER_DEGREE_LAT * std::cos(center.latitude * DEG_TO_RAD));
+
+                double lat = center.latitude + deltaLat;
+                double lon = center.longitude + deltaLon;
+                boundary.vertices.push_back({lat, lon});
+            }
+
+            std::cout << "Generated circle boundary with " << samples << " vertices.\n";
             return boundary;
         }
 
@@ -45,8 +63,14 @@ namespace Localization {
 
         for (int i = 0; i < sides; ++i) {
             double theta = angleRad + (2 * M_PI * i / sides);
-            double lat = center.latitude + dimension * std::cos(theta);
-            double lon = center.longitude + dimension * std::sin(theta);
+            double deltaNorth = dimension * std::cos(theta); // meters
+            double deltaEast  = dimension * std::sin(theta); // meters
+
+            double deltaLat = deltaNorth / METERS_PER_DEGREE_LAT;
+            double deltaLon = deltaEast / (METERS_PER_DEGREE_LAT * std::cos(latRad));
+
+            double lat = center.latitude + deltaLat;
+            double lon = center.longitude + deltaLon;
             boundary.vertices.push_back({lat, lon});
         }
 
